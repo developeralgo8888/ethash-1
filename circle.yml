@@ -154,9 +154,9 @@ jobs:
 
   linux-clang-sanitizers:
     docker:
-      - image: ethereum/cpp-build-env:17-clang-12
+      - image: ethereum/cpp-build-env:17-clang-13
     environment:
-      - CMAKE_OPTIONS: -DSANITIZE=address,undefined,unsigned-integer-overflow,shift-exponent,implicit-conversion,nullability
+      - CMAKE_OPTIONS: -DSANITIZE=address,undefined,unsigned-integer-overflow,shift-exponent,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy
       - ASAN_OPTIONS: allocator_may_return_null=1
       - UBSAN_OPTIONS: halt_on_error=1
     steps:
@@ -242,25 +242,25 @@ jobs:
           working_directory: ~/project/dist
           command: |
             find -name '*linux_x86_64.whl' -exec auditwheel repair {} \;
-      - store_artifacts:
-          path: ~/project/dist
-          destination: dist
       - run:
           name: "Select Python"
           command: |
-            echo 'export PATH=/opt/python/cp39-cp39/bin:$PATH' >> $BASH_ENV
+            echo 'export PATH=/opt/python/cp310-cp310/bin:$PATH' >> $BASH_ENV
             source $BASH_ENV
             python --version
             pip --version
+      - run:
+          name: "Build source dist"
+          command: ./setup.py sdist
+      - store_artifacts:
+          path: ~/project/dist
+          destination: dist
       - run:
           name: "Install libffi"
           command: apt -q update && apt -qy install libffi-dev
       - run:
           name: "Install CMake"
           command: pip install cmake
-      - run:
-          name: "Build source dist"
-          command: ./setup.py sdist
       - run:
           name: "Build wheel with CMake build"
           command: ./setup.py bdist_wheel
@@ -270,7 +270,7 @@ jobs:
 
   macos-xcode-tsan:
     macos:
-      xcode: "13.1.0"
+      xcode: "13.3.0"
     environment:
       - CMAKE_OPTIONS: -DSANITIZE=thread
       - TSAN_OPTIONS: allocator_may_return_null=1
@@ -279,13 +279,13 @@ jobs:
 
   macos-xcode-old:
     macos:
-      xcode: "11.2.1"
+      xcode: "11.4.1"
     steps:
       - macos-defaults
 
   macos-release:
     macos:
-      xcode: "13.1.0"
+      xcode: "13.3.0"
     environment:
       - CMAKE_OPTIONS: -DETHASH_BUILD_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=~/project/dist
     steps:
@@ -348,7 +348,7 @@ workflows:
       - linux-gcc-coverage
       - linux-clang-sanitizers
       - linux-32bit-asan
-      - mips64
+      # - mips64  toolchain is broken on recent Debian
       - powerpc64
       - macos-xcode-tsan
       - macos-xcode-old
